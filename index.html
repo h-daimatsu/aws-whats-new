@@ -178,12 +178,12 @@ footer { color: var(--muted); font-size: 0.85rem; padding: 0.5rem 0 1.5rem; }
   }
   function sortedEntries(obj) {
     return Object.keys(obj).map(function (k) { return [k, obj[k]]; })
-      .sort(function (a, b) { return b[1] - a[1] || (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0); });
+      .sort(function (a, b) { return a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0; });
   }
   var catEntries = sortedEntries(week.marchitecture);
   if (week.unclassified_items > 0) {
+    // 分類なしは、アルファベット順の並びの最後に置く
     catEntries.push([NONE_KEY, week.unclassified_items]);
-    catEntries.sort(function (a, b) { return b[1] - a[1]; });
   }
   drawBars("cat-bars", catEntries, true);
   drawBars("prod-bars", sortedEntries(week.products).filter(function (e) { return e[1] >= 2; }), false);
