@@ -192,7 +192,12 @@ footer { color: var(--muted); font-size: 0.85rem; padding: 0.5rem 0 1.5rem; }
   var chips = document.getElementById("chips");
   var chipButtons = Object.create(null);
   Object.keys(byCat)
-    .sort(function (a, b) { return byCat[b].length - byCat[a].length || (a < b ? -1 : 1); })
+    // アルファベット順。分類なしは最後
+    .sort(function (a, b) {
+      if (a === NONE_KEY) { return b === NONE_KEY ? 0 : 1; }
+      if (b === NONE_KEY) { return -1; }
+      return a < b ? -1 : a > b ? 1 : 0;
+    })
     .forEach(function (key) {
       var li = el("li");
       var b = el("button", "chip", labelOf(key));
