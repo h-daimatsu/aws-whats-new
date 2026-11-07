@@ -93,6 +93,7 @@ footer { color: var(--muted); font-size: 0.85rem; padding: 0.5rem 0 1.5rem; }
 
 <section aria-labelledby="h-items" id="items-section">
   <h2 id="h-items">分類別の記事</h2>
+  <p class="note">分類名の横の数字は、直近 <span id="win-days-2"></span> 日のうち手元にある記事の件数です。上の「その週」の件数とは期間が違うため、一致しません。</p>
   <ul class="chips" id="chips"></ul>
   <p class="note" id="items-caption" aria-live="polite"></p>
   <table id="items-table" hidden>
@@ -132,6 +133,7 @@ footer { color: var(--muted); font-size: 0.85rem; padding: 0.5rem 0 1.5rem; }
   });
 
   document.getElementById("win-days").textContent = String(data.window_days);
+  document.getElementById("win-days-2").textContent = String(data.window_days);
   document.getElementById("week-line").textContent =
     week.week + "(" + week.start + " 〜 " + week.end + ")";
 
