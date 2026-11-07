@@ -46,7 +46,16 @@ button.name, button.chip {
 }
 button.chip { border: 1px solid var(--border); border-radius: 1rem; padding: 0.2rem 0.7rem; text-decoration: none; background: var(--card); }
 button[aria-pressed="true"] { background: var(--sel); font-weight: 600; }
-button:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+button:focus-visible, a:focus-visible, [role="tabpanel"]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+[hidden] { display: none !important; }
+.tabs { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0 0 1rem; }
+.tab {
+  flex: 1 1 auto; min-width: 44px; min-height: 44px; padding: 0.4rem 0.8rem; font: inherit; text-align: center;
+  color: var(--muted); background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+  cursor: pointer; overflow-wrap: anywhere;
+}
+.tab[aria-selected="true"] { color: var(--text); background: var(--sel); border-color: var(--accent); font-weight: 600; }
+.tab .count { color: var(--muted); font-size: 0.85rem; }
 .chips { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0 0 1rem; padding: 0; list-style: none; }
 .chip .count { color: var(--muted); font-size: 0.85rem; margin-left: 0.3rem; }
 table { width: 100%; border-collapse: collapse; }
@@ -73,28 +82,35 @@ footer { color: var(--muted); font-size: 0.85rem; padding: 0.5rem 0 1.5rem; }
 <main>
 <h1>AWS What's New 統計</h1>
 <p class="sub" id="week-line"></p>
-<p class="sub" id="obs-line"></p>
 
-<section aria-labelledby="h-week">
-  <h2 id="h-week">直近週の統計</h2>
+<div class="tabs" id="tablist" role="tablist" aria-label="表示の切り替え" hidden>
+  <button type="button" class="tab" role="tab" id="tab-overview" data-tab="overview" aria-controls="panel-overview" aria-selected="true" tabindex="0">概要</button>
+  <button type="button" class="tab" role="tab" id="tab-categories" data-tab="categories" aria-controls="panel-categories" aria-selected="false" tabindex="-1">サービス分類 <span class="count" id="n-categories"></span></button>
+  <button type="button" class="tab" role="tab" id="tab-products" data-tab="products" aria-controls="panel-products" aria-selected="false" tabindex="-1">サービス名 <span class="count" id="n-products"></span></button>
+  <button type="button" class="tab" role="tab" id="tab-articles" data-tab="articles" aria-controls="panel-articles" aria-selected="false" tabindex="-1">記事 <span class="count" id="n-articles"></span></button>
+</div>
+
+<section role="tabpanel" id="panel-overview" aria-labelledby="tab-overview">
+  <h2>直近週の統計</h2>
   <dl class="stats" id="stats"></dl>
   <p class="note" id="week-note"></p>
+  <p class="note" id="obs-line"></p>
 </section>
 
-<section aria-labelledby="h-cat">
-  <h2 id="h-cat">サービス分類別の件数(直近 <span id="win-days"></span> 日)</h2>
-  <p class="note">手元にある記事の件数です。記事が複数の分類に入るときは、それぞれで数えます。分類名を選ぶと、下に記事を表示します。</p>
+<section role="tabpanel" id="panel-categories" aria-labelledby="tab-categories">
+  <h2>サービス分類別の件数(直近 <span id="win-days"></span> 日)</h2>
+  <p class="note">手元にある記事の件数です。記事が複数の分類に入るときは、それぞれで数えます。分類名を選ぶと、「記事」タブにその分類の記事を表示します。</p>
   <ul class="bars" id="cat-bars"></ul>
 </section>
 
-<section aria-labelledby="h-prod">
-  <h2 id="h-prod">サービス別の件数(直近 <span id="win-days-3"></span> 日、2 件以上)</h2>
+<section role="tabpanel" id="panel-products" aria-labelledby="tab-products">
+  <h2>サービス別の件数(直近 <span id="win-days-3"></span> 日、2 件以上)</h2>
   <ul class="bars" id="prod-bars"></ul>
 </section>
 
-<section aria-labelledby="h-items" id="items-section">
-  <h2 id="h-items">分類別の記事</h2>
-  <p class="note">分類名の横の数字は、上の「サービス分類別の件数」と同じ(直近 <span id="win-days-2"></span> 日、手元にある分)です。</p>
+<section role="tabpanel" id="panel-articles" aria-labelledby="tab-articles">
+  <h2>分類別の記事</h2>
+  <p class="note">分類名の横の数字は、「サービス分類」タブの件数と同じ(直近 <span id="win-days-2"></span> 日、手元にある分)です。</p>
   <ul class="chips" id="chips"></ul>
   <p class="note" id="items-caption" aria-live="polite"></p>
   <table id="items-table" hidden>
@@ -166,7 +182,7 @@ footer { color: var(--muted); font-size: 0.85rem; padding: 0.5rem 0 1.5rem; }
       if (onPick) {
         var b = el("button", "name", labelOf(e[0]));
         b.type = "button";
-        b.addEventListener("click", function () { select(e[0], true); });
+        b.addEventListener("click", function () { go("articles", e[0]); focusArticles(); });
         li.appendChild(b);
       } else {
         li.appendChild(el("span", "name", e[0]));
@@ -197,7 +213,8 @@ footer { color: var(--muted); font-size: 0.85rem; padding: 0.5rem 0 1.5rem; }
   data.items.forEach(function (it) {
     it.p.forEach(function (p) { prodCounts[p] = (prodCounts[p] || 0) + 1; });
   });
-  drawBars("prod-bars", sortedEntries(prodCounts).filter(function (e) { return e[1] >= 2; }), false);
+  var prodEntries = sortedEntries(prodCounts).filter(function (e) { return e[1] >= 2; });
+  drawBars("prod-bars", prodEntries, false);
 
   var obsLine = "観測開始: " + (data.observed_since || "不明") +
     "(記事は " + data.first_article + " 以降のものを含みます。フィードに残っていた分までさかのぼっています)";
@@ -219,7 +236,7 @@ footer { color: var(--muted); font-size: 0.85rem; padding: 0.5rem 0 1.5rem; }
       b.type = "button";
       b.appendChild(el("span", "count", String(byCat[key].length)));
       b.setAttribute("aria-pressed", "false");
-      b.addEventListener("click", function () { select(key, false); });
+      b.addEventListener("click", function () { go("articles", key); });
       li.appendChild(b);
       chips.appendChild(li);
       chipButtons[key] = b;
@@ -263,17 +280,78 @@ footer { color: var(--muted); font-size: 0.85rem; padding: 0.5rem 0 1.5rem; }
     tbody.appendChild(frag);
   }
 
-  function keyFromHash() {
-    var m = /^#cat=(.*)$/.exec(location.hash);
-    if (!m) return null;
-    try { return decodeURIComponent(m[1]); } catch (e) { return null; }
+  // タブ。初期状態は全パネルを表示しておき、ここで初めてタブ表示に切り替える(JS が動かない環境の代替表示)。
+  var TABS = ["overview", "categories", "products", "articles"];
+  var tablist = document.getElementById("tablist");
+  var tabEls = Object.create(null);
+  var panelEls = Object.create(null);
+  var active = null;
+  var shownCat = null;
+  TABS.forEach(function (t) {
+    tabEls[t] = document.getElementById("tab-" + t);
+    panelEls[t] = document.getElementById("panel-" + t);
+    panelEls[t].tabIndex = 0;
+    tabEls[t].addEventListener("click", function () { go(t); });
+  });
+  document.getElementById("n-categories").textContent = String(catEntries.length);
+  document.getElementById("n-products").textContent = String(prodEntries.length);
+  document.getElementById("n-articles").textContent = String(data.items.length);
+
+  // ハッシュ: #tab=overview|categories|products|articles、#cat=<分類>(記事タブで分類を選ぶ)。
+  // cat が undefined のときは、いま選んでいる分類をそのまま使う。
+  function parseHash() {
+    var h = location.hash, m = /^#cat=(.*)$/.exec(h);
+    if (m) {
+      try { return { tab: "articles", cat: decodeURIComponent(m[1]) || null }; } catch (e) { /* 壊れた値は概要 */ }
+      return { tab: "overview" };
+    }
+    m = /^#tab=([a-z]+)$/.exec(h);
+    return { tab: m && TABS.indexOf(m[1]) >= 0 ? m[1] : "overview" };
   }
-  function select(key, scroll) {
-    location.hash = "cat=" + encodeURIComponent(key);
-    if (scroll) document.getElementById("items-section").scrollIntoView();
+  function hashFor(tab) {
+    return tab === "articles" && shownCat ? "#cat=" + encodeURIComponent(shownCat) : "#tab=" + tab;
   }
-  window.addEventListener("hashchange", function () { showCategory(keyFromHash()); });
-  showCategory(keyFromHash());
+  function apply(s) {
+    if (s.cat !== undefined && s.cat !== shownCat) {
+      shownCat = s.cat;
+      showCategory(shownCat);
+    }
+    TABS.forEach(function (t) {
+      var on = t === s.tab;
+      tabEls[t].setAttribute("aria-selected", on ? "true" : "false");
+      tabEls[t].tabIndex = on ? 0 : -1;
+      panelEls[t].hidden = !on;
+    });
+    active = s.tab;
+  }
+  function go(tab, cat) {
+    apply({ tab: tab, cat: cat });
+    var h = hashFor(tab);
+    if (location.hash !== h) location.hash = h;
+  }
+  // 棒グラフの分類名を選んだとき、押したボタンは隠れるので、記事のパネルへフォーカスと表示位置を移す。
+  function focusArticles() {
+    panelEls.articles.focus({ preventScroll: true });
+    tablist.scrollIntoView();
+  }
+  tablist.addEventListener("keydown", function (e) {
+    if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+    var i = TABS.indexOf(e.target.getAttribute("data-tab")), n;
+    if (i < 0) return;
+    if (e.key === "ArrowRight") n = (i + 1) % TABS.length;
+    else if (e.key === "ArrowLeft") n = (i + TABS.length - 1) % TABS.length;
+    else if (e.key === "Home") n = 0;
+    else if (e.key === "End") n = TABS.length - 1;
+    else return;
+    e.preventDefault();
+    go(TABS[n]);
+    tabEls[TABS[n]].focus();
+  });
+  window.addEventListener("hashchange", function () { apply(parseHash()); });
+
+  showCategory(null);
+  tablist.hidden = false;
+  apply(parseHash());
 })();
 </script>
 </body>
